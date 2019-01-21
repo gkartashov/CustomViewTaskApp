@@ -5,76 +5,54 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
-import android.widget.FrameLayout
-import android.widget.Toast
 import androidx.core.content.ContextCompat
-import kotlinx.android.synthetic.main.shape_drawer_layout.view.*
+import com.jg.shapedrawercustomview.shape.*
 import kotlin.random.Random
+import android.util.TypedValue
 
+/**
+ * View, которая по нажатию на нее рисует одну из следующих фигур
+ * - круг
+ * - квадрат
+ * - квадрат со скругленными углами
+ * В xml можно задать стандартный цвет фигуры.
+ * Программно можно задать массив цветов, из которых будет случайным образом выбираться цвет фигуры
+ */
 class ShapeDrawerView @JvmOverloads constructor(
     context: Context,
     attributeSet: AttributeSet? = null
-) : FrameLayout(context, attributeSet) {
+) : View(context, attributeSet) {
 
     private val DEFAULT_COLOR = Color.GREEN
-    private val MAX_SHAPE_COUNT = 10
-    private val MIN_SHAPE_SIZE = 20
-    private val MAX_SHAPE_SIZE = 50
+    private val MIN_SHAPE_SIZE_DP: Float
+    private val MAX_SHAPE_SIZE_DP: Float
+    private val MIN_RADIUS_SIZE_DP: Float
+    private val MAX_RADIUS_SIZE_DP: Float
 
-    private val drawPoint = PointF()
-    private var shapeType = ShapeType.CIRCLE
-
-    var colors: Array<Int>? = null
     var defaultColor = DEFAULT_COLOR
-    var shapeCounter = 0
-    var maxShapeCount = MAX_SHAPE_COUNT
+    var onDrawShapeLambda: (() -> Unit)? = null
+
+    private var shapeList = mutableListOf<Shape>()
+    private var colors: Array<Int>? = null
 
     init {
-        View.inflate(context, R.layout.shape_drawer_layout, this)
+        MIN_SHAPE_SIZE_DP = dipToPixels(context, 40f)
+        MAX_SHAPE_SIZE_DP = dipToPixels(context, 80f)
+        MIN_RADIUS_SIZE_DP = dipToPixels(context, 16f)
+        MAX_RADIUS_SIZE_DP = dipToPixels(context, 24f)
         applyAttributes(attributeSet)
     }
 
-    fun setColorsFromHexArray(colors: Array<Int>) {
-        this.colors = colors.map(this::fromHexColorToIntColor).toTypedArray()
-    }
-
-    private fun fromResourceColorToHexColor(color: Int) = ContextCompat.getColor(context, color)
-
-    private fun fromHexColorToIntColor(color: Int): Int {
-        val hexString = String.format("#%06X", (0xFFFFFF and color))
-        return Color.parseColor(hexString)
-    }
-
-    override fun onFinishInflate() {
-        super.onFinishInflate()
-        /*val colorRaw = Color.RED
-        val colorInt = ContextCompat.getColor(context, android.R.color.holo_red_light)
-        val colorRes = android.R.color.holo_red_light
-        val colorRawHex = String.format("#%06X", (0xFFFFFF and Color.RED))
-        val colorIntHex = String.format("#%06X", (0xFFFFFF and colorInt))
-        val colorResHex = String.format("#%06X", (0xFFFFFF and android.R.color.holo_red_light))
-        shape_drawer_counter_tv.text = "colorRaw: $colorRaw\ncolorInt: $colorInt\ncolorRes: $colorRes\ncolorRawHex: $colorRawHex\ncolorIntHex: $colorIntHex\n" +
-                "colorResHex: $colorResHex"*/
-        shape_drawer_counter_tv.text = shapeCounter.toString()
-    }
-
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        if (event?.action == MotionEvent.ACTION_DOWN) {
-            drawPoint.x = event.x
-            drawPoint.y = event.y
+        return if (event?.action == MotionEvent.ACTION_DOWN) {
+            val shape = getRandomShape(PointF(event.x, event.y))
+            shapeList.add(shape)
 
-            shapeCounter++
-            if (shapeCounter == maxShapeCount) {
-                shapeCounter = 0
-                showToast()
-            }
-
-            shape_drawer_counter_tv.text = shapeCounter.toString()
-            shapeType = ShapeType.getRandomShapeType()
             invalidate()
-            return true
+            onDrawShapeLambda?.invoke()
+            true
         } else {
-            return super.onTouchEvent(event)
+            super.onTouchEvent(event)
         }
     }
 
@@ -82,45 +60,78 @@ class ShapeDrawerView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         canvas?.let {
-            when (shapeType) {
-                ShapeType.CIRCLE -> drawCircle(canvas)
-                else -> {
-                }
+            for (shape in shapeList) {
+                shape.draw(canvas)
             }
         }
     }
 
-    private fun drawCircle(canvas: Canvas) {
-        val radius = Random.nextInt(MIN_SHAPE_SIZE, MAX_SHAPE_SIZE).toFloat()
+    private fun dipToPixels(context: Context, dipValue: Float): Float {
+        val metrics = context.resources.displayMetrics
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dipValue, metrics)
+    }
+
+    private fun applyAttributes(attributeSet: AttributeSet?) {
+        val ta = context.theme.obtainStyledAttributes(attributeSet, R.styleable.ShapeDrawerView, 0, 0)
+        defaultColor = ta.getColor(R.styleable.ShapeDrawerView_defaultColor, DEFAULT_COLOR)
+        ta.recycle()
+    }
+
+    /**
+     * Получение массива цветов из массива вида { 0x000000, ... }
+     */
+    fun setColorsFromHexArray(colors: Array<Int>) {
+        this.colors = colors.map(this::fromHexColorToIntColor).toTypedArray()
+    }
+
+    /**
+     * Получение массива цветов из массива вида { R.color.color, .... }
+     */
+    fun setColorsFromResArray(colors: Array<Int>) {
+        this.colors = colors.map(this::fromResourceColorToIntColor).toTypedArray()
+    }
+
+    fun clearCanvas() {
+        shapeList.clear()
+        invalidate()
+    }
+
+    private fun fromResourceColorToIntColor(color: Int) = ContextCompat.getColor(context, color)
+
+    private fun fromHexColorToIntColor(color: Int): Int {
+        val hexString = String.format("#%06X", (0xFFFFFF and color))
+        return Color.parseColor(hexString)
+    }
+
+    private fun getRandomShape(point: PointF): Shape {
+        val shapeType = ShapeType.getRandomShapeType()
         val paint = getPaint()
-        canvas.drawCircle(drawPoint.x, drawPoint.y, radius, paint)
+        return when (shapeType) {
+            ShapeType.CIRCLE -> {
+                val radius = Random.nextInt(MIN_RADIUS_SIZE_DP.toInt(), MAX_RADIUS_SIZE_DP.toInt()).toFloat()
+                Circle(paint, point, radius)
+            }
+            ShapeType.ROUNDED_SQUARE -> {
+                val sideSize = Random.nextInt(MIN_SHAPE_SIZE_DP.toInt(), MAX_SHAPE_SIZE_DP.toInt()).toFloat()
+                val centeredPoint = moveDrawPointToCenter(point, sideSize)
+                val radius = Random.nextInt(MIN_RADIUS_SIZE_DP.toInt(), MAX_RADIUS_SIZE_DP.toInt()).toFloat()
+                RoundedSquare(paint, centeredPoint, sideSize, radius)
+            }
+            ShapeType.SQUARE -> {
+                val sideSize = Random.nextInt(MIN_SHAPE_SIZE_DP.toInt(), MAX_SHAPE_SIZE_DP.toInt()).toFloat()
+                val centeredPoint = moveDrawPointToCenter(point, sideSize)
+                Square(paint, centeredPoint, sideSize)
+            }
+        }
     }
 
     private fun getPaint() = Paint().apply {
         color = colors?.random() ?: defaultColor
     }
 
-    private fun applyAttributes(attributeSet: AttributeSet?) {
-        val ta = context.theme.obtainStyledAttributes(attributeSet, R.styleable.ShapeDrawerView, 0, 0)
-        defaultColor = ta.getColor(R.styleable.ShapeDrawerView_defaultColor, DEFAULT_COLOR)
-        maxShapeCount = ta.getInteger(R.styleable.ShapeDrawerView_maxShapeCount, MAX_SHAPE_COUNT)
-        ta.recycle()
-    }
-
-    private fun showToast() =
-        Toast.makeText(context, resources.getString(R.string.game_over), Toast.LENGTH_SHORT).show()
-
-    private enum class ShapeType {
-        CIRCLE,
-        ROUNDED_SQUARE,
-        SQUARE;
-
-        companion object {
-            private val random = Random(System.currentTimeMillis())
-            private val size = values().size
-            private val values = values()
-
-            fun getRandomShapeType() = values[random.nextInt(size)]
-        }
+    private fun moveDrawPointToCenter(point: PointF, sideSize: Float): PointF {
+        point.x -= sideSize / 2.0f
+        point.y -= sideSize / 2.0f
+        return point
     }
 }

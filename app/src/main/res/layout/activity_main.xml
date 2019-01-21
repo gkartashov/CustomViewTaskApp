@@ -7,8 +7,11 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.jg.shapedrawercustomview.ShapeDrawerView
+    <com.jg.shapedrawercustomview.ShapeDrawer
+        android:id="@+id/shape_drawer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:color="@color/colorAccent"
+        app:maxItemCount="10" />
 
 </LinearLayout>

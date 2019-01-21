@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="ShapeDrawerView">
-        <attr name="maxShapeCount" format="integer" />
         <attr name="defaultColor" format="color" />
     </declare-styleable>
+    <declare-styleable name="ShapeDrawer">
+        <attr name="maxItemCount" format="integer" />
+        <attr name="color" format="color" />
+    </declare-styleable>
+
 </resources>
