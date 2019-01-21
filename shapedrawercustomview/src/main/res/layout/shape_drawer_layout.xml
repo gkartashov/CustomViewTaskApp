@@ -3,22 +3,16 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <FrameLayout
+    <com.jg.shapedrawercustomview.ShapeDrawerView
+        android:id="@+id/shape_drawer_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        tools:visibility="gone" />
 
-        <com.jg.shapedrawercustomview.ShapeDrawerView
-            android:id="@+id/shape_drawer_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            tools:visibility="gone" />
-
-        <TextView
-            android:id="@+id/shape_drawer_counter_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|center"
-            tools:text="1 " />
-
-    </FrameLayout>
+    <TextView
+        android:id="@+id/shape_drawer_counter_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center"
+        tools:text="1 " />
 </merge>

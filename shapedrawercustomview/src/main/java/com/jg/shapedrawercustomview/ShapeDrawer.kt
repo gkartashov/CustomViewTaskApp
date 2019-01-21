@@ -43,15 +43,6 @@ class ShapeDrawer @JvmOverloads constructor(
         shapeDrawerView.defaultColor = color
     }
 
-    private fun handleDraw() {
-        shapeCounter++
-        if (shapeCounter >= maxShapeCount) {
-            shapeCounter = 0
-            shapeDrawerView.clearCanvas()
-            showToast()
-        }
-        counterTextView.text = shapeCounter.toString()
-    }
 
     fun setColorsFromResArray(colors: Array<Int>) {
         shapeDrawerView.setColorsFromResArray(colors)
@@ -70,4 +61,14 @@ class ShapeDrawer @JvmOverloads constructor(
 
     private fun showToast() =
         Toast.makeText(context, resources.getString(R.string.game_over), Toast.LENGTH_SHORT).show()
+
+    private fun handleDraw() {
+        shapeCounter++
+        if (shapeCounter >= maxShapeCount) {
+            shapeCounter = 0
+            shapeDrawerView.clearCanvas()
+            showToast()
+        }
+        counterTextView.text = shapeCounter.toString()
+    }
 }
